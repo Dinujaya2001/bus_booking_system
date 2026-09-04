@@ -2,82 +2,86 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bus Booking - My Bookings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Booking - Reservations</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary px-4 mb-4">
-    <a class="navbar-brand fw-bold" href="index.html">BusGo</a>
-    <div class="ms-auto">
-        <a href="index.html" class="btn btn-sm btn-outline-light">Book More</a>
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="index.html">BusGo Portal</a>
+        <div>
+            <a href="index.html" class="btn btn-sm btn-outline-light">Book Schedule</a>
+        </div>
     </div>
 </nav>
 
 <div class="container">
     <div id="bookingListAlert"></div>
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-white">
-            <h5 class="mb-0">Booking Records</h5>
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">Confirmed Bookings</h5>
         </div>
         <div class="table-responsive p-3">
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Booking ID</th>
-                        <th>Date</th>
+                        <th>Booked Date</th>
                         <th>Schedule</th>
-                        <th>Seats</th>
-                        <th>Action</th>
+                        <th>Allocated Seats</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody id="bookingTableBody">
-                    <tr><td colspan="5" class="text-center text-muted">Loading reservations...</td></tr>
+                <tbody id="tblBookings">
+                    <tr><td colspan="5" class="text-center text-muted py-3">Fetching reservations...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
-    loadBookings();
+    loadReservations();
 });
 
-async function loadBookings() {
-    const user = checkAuth();
-    // Fetch all bookings for customer / vendor[cite: 1]
-    const res = await apiGet(`/BusBooking/GetAllBusBookings?vendorId=1`);
-    const tbody = document.getElementById('bookingTableBody');
+async function loadReservations() {
+    const res = await apiGet('/BusBooking/GetAllBusBookings?vendorId=1');
+    const tbody = document.getElementById('tblBookings');
 
-    if (res.result && Array.isArray(res.data) && res.data.length > 0) {
-        tbody.innerHTML = res.data.map(b => `
+    if (res && res.result && Array.isArray(res.data) && res.data.length > 0) {
+        tbody.innerHTML = res.data.map(item => `
             <tr>
-                <td>#${b.bookingId}</td>
-                <td>${new Date(b.bookingDate).toLocaleDateString()}</td>
-                <td>Schedule #${b.scheduleId}</td>
-                <td>${b.busBookingPassengers?.map(p => p.seatNo).join(', ') || 'N/A'}</td>
+                <td><strong>#${item.bookingId}</strong></td>
+                <td>${new Date(item.bookingDate).toLocaleDateString()}</td>
+                <td>Schedule #${item.scheduleId}</td>
+                <td>${item.busBookingPassengers?.map(p => p.seatNo).join(', ') || 'None'}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-danger" onclick="cancelBooking(${b.bookingId})">Cancel</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="cancelReservation(${item.bookingId})">
+                        Cancel
+                    </button>
                 </td>
             </tr>
         `).join('');
     } else {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No reservations found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No active bookings recorded.</td></tr>`;
     }
 }
 
-async function cancelBooking(id) {
-    if (!confirm(`Are you sure you want to cancel booking #${id}?`)) return;
-    const res = await apiDelete(`/BusBooking/DeleteBusBooking?id=${id}`);
-    if (res.result) {
-        showAlert('bookingListAlert', 'success', 'Booking cancelled successfully.');
-        loadBookings();
+async function cancelReservation(bookingId) {
+    if (!confirm(`Cancel reservation #${bookingId}?`)) return;
+    const res = await apiDelete(`/BusBooking/DeleteBusBooking?id=${bookingId}`);
+    if (res && res.result === true) {
+        showAlert('bookingListAlert', 'success', 'Booking deleted successfully.');
+        loadReservations();
     } else {
-        showAlert('bookingListAlert', 'danger', res.message || 'Failed to cancel.');
+        showAlert('bookingListAlert', 'danger', (res && res.message) ? res.message : 'Could not delete booking.');
     }
 }
 </script>
