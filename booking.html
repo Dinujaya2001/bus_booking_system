@@ -2,42 +2,49 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bus Booking - Seat Selection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Booking - Seats & Passengers</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-<div class="container py-4">
-    <a href="index.html" class="btn btn-outline-secondary mb-3">&larr; Back to Schedules</a>
+<body class="py-4">
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="index.html" class="btn btn-outline-secondary">&larr; Back to Schedules</a>
+        <h5 class="mb-0" id="scheduleTitle">Bus Reservation</h5>
+    </div>
+
     <div id="bookingAlert"></div>
 
     <div class="row">
-        <!-- Seat Map View -->
-        <div class="col-md-5">
+        <!-- Seat Map -->
+        <div class="col-lg-5 mb-4">
             <div class="card shadow-sm border-0 p-3 text-center">
-                <h5 class="mb-3">Select Your Seats</h5>
-                <div class="seat-legend mb-3 small">
-                    <span class="bg-light border"></span> Available
-                    <span class="bg-primary ms-2"></span> Selected
-                    <span class="bg-danger ms-2"></span> Booked
+                <h6 class="mb-3">Bus Seating Map</h6>
+                <div class="seat-legend mb-3 small d-flex justify-content-center gap-3">
+                    <div><span class="bg-light border d-inline-block" style="width:14px; height:14px;"></span> Available</div>
+                    <div><span class="bg-primary d-inline-block" style="width:14px; height:14px;"></span> Selected</div>
+                    <div><span class="bg-danger d-inline-block" style="width:14px; height:14px;"></span> Booked</div>
                 </div>
-                <div id="seatGrid" class="seat-grid mb-3"></div>
+                <div id="seatGrid" class="seat-grid mb-2"></div>
             </div>
         </div>
 
-        <!-- Passenger Details & Confirmation -->
-        <div class="col-md-7">
+        <!-- Passenger Forms -->
+        <div class="col-lg-7">
             <div class="card shadow-sm border-0 p-4">
-                <h5>Passenger Details</h5>
-                <p class="text-muted small" id="selectionSummary">Select a seat to add passenger info</p>
+                <h6>Passenger Details</h6>
+                <p class="text-muted small" id="selectionStatus">Select available seats from the layout to proceed.</p>
                 <form id="bookingForm">
-                    <div id="passengerFields"></div>
-                    <div class="border-top pt-3 mt-3 d-none" id="checkoutSection">
-                        <div class="d-flex justify-content-between mb-3">
-                            <span class="h5">Total Price:</span>
-                            <span class="h5 text-success" id="totalPrice">Rs. 0.00</span>
+                    <div id="passengerContainer"></div>
+                    <div id="checkoutBox" class="border-top pt-3 d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-bold">Total Amount:</span>
+                            <span class="h4 text-success mb-0" id="lblTotalPrice">Rs. 0.00</span>
                         </div>
-                        <button type="submit" class="btn btn-success w-100">Confirm & Book</button>
+                        <button type="submit" id="btnConfirmBooking" class="btn btn-success w-100 py-2">
+                            Confirm & Reserve
+                        </button>
                     </div>
                 </form>
             </div>
@@ -45,6 +52,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/booking.js"></script>
