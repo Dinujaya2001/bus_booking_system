@@ -1,0 +1,30 @@
+body {
+    background-color: #f4f6f9;
+}
+
+.seat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    max-width: 280px;
+    margin: 0 auto;
+}
+
+.seat-grid button {
+    height: 48px;
+    font-weight: bold;
+    border-radius: 8px;
+}
+
+.seat-grid button:nth-child(4n+2) {
+    margin-right: 20px; /* Bus Aisle space */
+}
+
+.seat-legend span {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
