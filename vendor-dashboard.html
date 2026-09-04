@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BusGo - Vendor Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 mb-4">
+    <a class="navbar-brand fw-bold" href="#">Vendor Dashboard</a>
+    <div class="ms-auto">
+        <a href="index.html" class="btn btn-sm btn-outline-light">Customer View</a>
+    </div>
+</nav>
+
+<div class="container mb-5">
+    <div id="vendorAlert"></div>
+
+    <div class="card shadow-sm border-0 p-4 mb-4">
+        <h5 class="mb-3">Create New Schedule</h5>
+        <form id="scheduleForm" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Bus Name</label>
+                <input type="text" id="busName" class="form-control" required placeholder="Express Line">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Vehicle Registration No</label>
+                <input type="text" id="busVehicleNo" class="form-control" required placeholder="ND-1234">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">From Location</label>
+                <select id="vFromLoc" class="form-select" required></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">To Location</label>
+                <select id="vToLoc" class="form-select" required></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Departure Time</label>
+                <input type="datetime-local" id="departureTime" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Arrival Time</label>
+                <input type="datetime-local" id="arrivalTime" class="form-control" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Price (Rs.)</label>
+                <input type="number" id="price" class="form-control" step="0.01" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Total Seats</label>
+                <input type="number" id="totalSeats" class="form-control" value="40" required>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Save Schedule</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card shadow-sm border-0 p-3">
+        <h5 class="mb-3">Existing Schedules</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Bus</th>
+                        <th>Vehicle No</th>
+                        <th>Route</th>
+                        <th>Departure</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="vendorScheduleTable">
+                    <tr><td colspan="6" class="text-center text-muted">Loading schedules...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/vendor.js"></script>
+</body>
+</html>
