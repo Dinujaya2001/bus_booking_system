@@ -1,5 +1,5 @@
 let selectedSeats = [];
-let scheduleDetails = null;
+let currentSchedule = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     checkAuth();
@@ -8,77 +8,84 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'index.html';
         return;
     }
-    await initSeatMap(scheduleId);
+    await loadSeatInformation(scheduleId);
+    initBookingForm();
 });
 
-async function initSeatMap(scheduleId) {
+async function loadSeatInformation(scheduleId) {
     const [schedRes, bookedRes] = await Promise.all([
         apiGet(`/BusBooking/GetBusScheduleById?id=${scheduleId}`),
         apiGet(`/BusBooking/getBookedSeats?scheduleId=${scheduleId}`)
     ]);
 
-    if (!schedRes.result) {
-        showAlert('bookingAlert', 'danger', 'Unable to fetch schedule details.');
+    if (!schedRes || !schedRes.result || !schedRes.data) {
+        showAlert('bookingAlert', 'danger', 'Unable to retrieve schedule information.');
         return;
     }
 
-    scheduleDetails = schedRes.data;
-    const bookedSeats = bookedRes.result ? bookedRes.data : [];
+    currentSchedule = schedRes.data;
+    document.getElementById('scheduleTitle').innerText = `${currentSchedule.busName} (${currentSchedule.busVehicleNo})`;
+
+    const bookedSeatNumbers = (bookedRes && bookedRes.result && Array.isArray(bookedRes.data)) ? bookedRes.data : [];
+    renderSeats(currentSchedule.totalSeats || 40, bookedSeatNumbers);
+}
+
+function renderSeats(total, bookedList) {
     const grid = document.getElementById('seatGrid');
     grid.innerHTML = '';
 
-    const totalSeats = scheduleDetails.totalSeats || 40;
-
-    for (let i = 1; i <= totalSeats; i++) {
-        const isBooked = bookedSeats.includes(i);
+    for (let i = 1; i <= total; i++) {
+        const isBooked = bookedList.includes(i);
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.innerText = i;
         btn.className = `btn btn-sm ${isBooked ? 'btn-danger disabled' : 'btn-outline-secondary'}`;
-        
+
         if (!isBooked) {
-            btn.onclick = () => toggleSeatSelection(i, btn);
+            btn.onclick = () => toggleSeat(i, btn);
         }
         grid.appendChild(btn);
     }
 }
 
-function toggleSeatSelection(seatNo, btn) {
-    if (selectedSeats.includes(seatNo)) {
-        selectedSeats = selectedSeats.filter(s => s !== seatNo);
+function toggleSeat(seatNum, btn) {
+    if (selectedSeats.includes(seatNum)) {
+        selectedSeats = selectedSeats.filter(s => s !== seatNum);
         btn.classList.replace('btn-primary', 'btn-outline-secondary');
     } else {
-        selectedSeats.push(seatNo);
+        selectedSeats.push(seatNum);
         btn.classList.replace('btn-outline-secondary', 'btn-primary');
     }
-    updatePassengerForm();
+    renderPassengerInputs();
 }
 
-function updatePassengerForm() {
-    const container = document.getElementById('passengerFields');
-    const checkout = document.getElementById('checkoutSection');
-    const summary = document.getElementById('selectionSummary');
+function renderPassengerInputs() {
+    const container = document.getElementById('passengerContainer');
+    const checkout = document.getElementById('checkoutBox');
+    const status = document.getElementById('selectionStatus');
 
     if (selectedSeats.length === 0) {
         container.innerHTML = '';
         checkout.classList.add('d-none');
-        summary.innerText = 'Select a seat to add passenger info';
+        status.innerText = 'Select available seats from the layout to proceed.';
         return;
     }
 
-    summary.innerText = `Selected Seats: ${selectedSeats.join(', ')}`;
+    status.innerText = `Selected Seats: ${selectedSeats.join(', ')}`;
     checkout.classList.remove('d-none');
-    document.getElementById('totalPrice').innerText = `Rs. ${(selectedSeats.length * scheduleDetails.price).toFixed(2)}`;
+    
+    const totalPrice = (selectedSeats.length * currentSchedule.price);
+    document.getElementById('lblTotalPrice').innerText = `Rs. ${totalPrice.toFixed(2)}`;
 
     container.innerHTML = selectedSeats.map(seat => `
         <div class="border rounded p-3 mb-3 bg-light">
-            <h6 class="text-primary mb-2">Passenger for Seat #${seat}</h6>
+            <span class="badge bg-primary mb-2">Seat #${seat}</span>
             <div class="row g-2">
                 <div class="col-md-5">
-                    <input type="text" class="form-control form-control-sm" placeholder="Full Name" id="name_${seat}" required>
+                    <input type="text" class="form-control form-control-sm" placeholder="Passenger Name" id="name_${seat}" required>
                 </div>
                 <div class="col-md-3">
-                    <input type="number" class="form-control form-control-sm" placeholder="Age" id="age_${seat}" required min="1" max="120">
+                    <input type="number" class="form-control form-control-sm" placeholder="Age" id="age_${seat}" min="1" max="100" required>
                 </div>
                 <div class="col-md-4">
                     <select class="form-select form-select-sm" id="gender_${seat}">
@@ -92,30 +99,41 @@ function updatePassengerForm() {
     `).join('');
 }
 
-document.getElementById('bookingForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const user = checkAuth();
+function initBookingForm() {
+    const form = document.getElementById('bookingForm');
+    if (!form) return;
 
-    const passengers = selectedSeats.map(seat => ({
-        passengerName: document.getElementById(`name_${seat}`).value.trim(),
-        age: parseInt(document.getElementById(`age_${seat}`).value),
-        gender: document.getElementById(`gender_${seat}`).value,
-        seatNo: seat
-    }));
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const user = checkAuth();
+        const btn = document.getElementById('btnConfirmBooking');
+        btn.disabled = true;
+        btn.innerText = 'Reserving Seats...';
 
-    const payload = {
-        custId: user.userId || 1,
-        bookingDate: new Date().toISOString(),
-        scheduleId: parseInt(sessionStorage.getItem('selectedScheduleId')),
-        busBookingPassengers: passengers
-    };
+        const passengers = selectedSeats.map(seat => ({
+            passengerName: document.getElementById(`name_${seat}`).value.trim(),
+            age: parseInt(document.getElementById(`age_${seat}`).value),
+            gender: document.getElementById(`gender_${seat}`).value,
+            seatNo: seat
+        }));
 
-    const res = await apiPost('/BusBooking/PostBusBooking', payload);
-    if (res.result) {
-        alert('Booking successfully created!');
-        sessionStorage.removeItem('selectedScheduleId');
-        window.location.href = 'my-bookings.html';
-    } else {
-        showAlert('bookingAlert', 'danger', res.message || 'Booking submission failed.');
-    }
-});
+        const payload = {
+            custId: user.userId || 1,
+            bookingDate: new Date().toISOString(),
+            scheduleId: parseInt(sessionStorage.getItem('selectedScheduleId')),
+            busBookingPassengers: passengers
+        };
+
+        const res = await apiPost('/BusBooking/PostBusBooking', payload);
+        btn.disabled = false;
+        btn.innerText = 'Confirm & Reserve';
+
+        if (res && res.result === true) {
+            alert('Reservation completed successfully!');
+            sessionStorage.removeItem('selectedScheduleId');
+            window.location.href = 'my-bookings.html';
+        } else {
+            showAlert('bookingAlert', 'danger', (res && res.message) ? res.message : 'Reservation failed.');
+        }
+    });
+}
