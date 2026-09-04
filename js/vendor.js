@@ -1,74 +1,87 @@
-const CURRENT_VENDOR_ID = 1;
+const VENDOR_ID = 1;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     checkAuth();
-    populateVendorLocations();
-    loadVendorSchedules();
+    await loadVendorLocations();
+    await fetchVendorSchedules();
+    setupScheduleForm();
 });
 
-async function populateVendorLocations() {
+async function loadVendorLocations() {
     const res = await apiGet('/BusBooking/GetBusLocations');
-    if (res.result && Array.isArray(res.data)) {
+    if (res && res.result && Array.isArray(res.data)) {
         const options = res.data.map(l => `<option value="${l.locationId}">${l.locationName}</option>`).join('');
-        document.getElementById('vFromLoc').innerHTML = options;
-        document.getElementById('vToLoc').innerHTML = options;
+        document.getElementById('vFrom').innerHTML = options;
+        document.getElementById('vTo').innerHTML = options;
     }
 }
 
-async function loadVendorSchedules() {
-    const res = await apiGet(`/BusBooking/GetBusSchedules?vendorId=${CURRENT_VENDOR_ID}`);
-    const tbody = document.getElementById('vendorScheduleTable');
+async function fetchVendorSchedules() {
+    const res = await apiGet(`/BusBooking/GetBusSchedules?vendorId=${VENDOR_ID}`);
+    const tbody = document.getElementById('tblVendorSchedules');
 
-    if (res.result && Array.isArray(res.data) && res.data.length > 0) {
+    if (res && res.result && Array.isArray(res.data) && res.data.length > 0) {
         tbody.innerHTML = res.data.map(s => `
             <tr>
                 <td><strong>${s.busName}</strong></td>
                 <td>${s.busVehicleNo}</td>
                 <td>${s.fromLocation} &rarr; ${s.toLocation}</td>
                 <td>${new Date(s.departureTime).toLocaleString()}</td>
-                <td>Rs. ${s.price.toFixed(2)}</td>
+                <td>Rs. ${Number(s.price).toFixed(2)}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteSchedule(${s.scheduleId})">Delete</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeSchedule(${s.scheduleId})">Delete</button>
                 </td>
             </tr>
         `).join('');
     } else {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No schedules found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No schedules configured for this vendor.</td></tr>`;
     }
 }
 
-document.getElementById('scheduleForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-        vendorId: CURRENT_VENDOR_ID,
-        busName: document.getElementById('busName').value.trim(),
-        busVehicleNo: document.getElementById('busVehicleNo').value.trim(),
-        fromLocation: parseInt(document.getElementById('vFromLoc').value),
-        toLocation: parseInt(document.getElementById('vToLoc').value),
-        departureTime: new Date(document.getElementById('departureTime').value).toISOString(),
-        arrivalTime: new Date(document.getElementById('arrivalTime').value).toISOString(),
-        scheduleDate: new Date(document.getElementById('departureTime').value).toISOString(),
-        price: parseFloat(document.getElementById('price').value),
-        totalSeats: parseInt(document.getElementById('totalSeats').value)
-    };
+function setupScheduleForm() {
+    const form = document.getElementById('vendorScheduleForm');
+    if (!form) return;
 
-    const res = await apiPost('/BusBooking/PostBusSchedule', payload);
-    if (res.result) {
-        showAlert('vendorAlert', 'success', 'Schedule added successfully.');
-        document.getElementById('scheduleForm').reset();
-        loadVendorSchedules();
-    } else {
-        showAlert('vendorAlert', 'danger', res.message || 'Failed to save schedule.');
-    }
-});
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSaveSchedule');
+        btn.disabled = true;
+        btn.innerText = 'Saving...';
 
-async function deleteSchedule(id) {
-    if (!confirm(`Delete schedule #${id}?`)) return;
+        const payload = {
+            vendorId: VENDOR_ID,
+            busName: document.getElementById('vBusName').value.trim(),
+            busVehicleNo: document.getElementById('vVehicleNo').value.trim(),
+            fromLocation: parseInt(document.getElementById('vFrom').value),
+            toLocation: parseInt(document.getElementById('vTo').value),
+            departureTime: new Date(document.getElementById('vDeparture').value).toISOString(),
+            arrivalTime: new Date(document.getElementById('vArrival').value).toISOString(),
+            scheduleDate: new Date(document.getElementById('vDeparture').value).toISOString(),
+            price: parseFloat(document.getElementById('vPrice').value),
+            totalSeats: parseInt(document.getElementById('vSeats').value)
+        };
+
+        const res = await apiPost('/BusBooking/PostBusSchedule', payload);
+        btn.disabled = false;
+        btn.innerText = 'Add Schedule';
+
+        if (res && res.result === true) {
+            showAlert('vendorAlert', 'success', 'Schedule added successfully.');
+            form.reset();
+            fetchVendorSchedules();
+        } else {
+            showAlert('vendorAlert', 'danger', (res && res.message) ? res.message : 'Failed to create schedule.');
+        }
+    });
+}
+
+async function removeSchedule(id) {
+    if (!confirm(`Remove schedule #${id}?`)) return;
     const res = await apiDelete(`/BusBooking/DeleteBusSchedule?id=${id}`);
-    if (res.result) {
-        showAlert('vendorAlert', 'success', 'Schedule deleted.');
-        loadVendorSchedules();
+    if (res && res.result === true) {
+        showAlert('vendorAlert', 'success', 'Schedule removed.');
+        fetchVendorSchedules();
     } else {
-        showAlert('vendorAlert', 'danger', res.message || 'Deletion failed.');
+        showAlert('vendorAlert', 'danger', (res && res.message) ? res.message : 'Failed to delete schedule.');
     }
 }
