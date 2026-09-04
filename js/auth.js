@@ -1,68 +1,87 @@
-// Login Form Event Listener
-document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // ASP.NET Core endpoint expects userName / emailId and password
-    const payload = {
-        userName: document.getElementById('loginUsername').value.trim(),
-        password: document.getElementById('loginPassword').value.trim()
-    };
-
-    const res = await apiPost('/BusBooking/login', payload);
-    
-    if (res.result) {
-        sessionStorage.setItem('user', JSON.stringify(res.data));
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Check if user already logged in
+    const activeUser = sessionStorage.getItem('user');
+    if (activeUser && window.location.pathname.endsWith('login.html')) {
         window.location.href = 'index.html';
-    } else {
-        showAlert('alertBox', 'danger', res.message || 'Invalid credentials or login failed.');
+        return;
+    }
+
+    // 2. Handle Login Submit
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            btn.disabled = true;
+            btn.innerText = 'Signing In...';
+
+            const payload = {
+                userName: document.getElementById('loginUsername').value.trim(),
+                password: document.getElementById('loginPassword').value.trim()
+            };
+
+            const res = await apiPost('/BusBooking/login', payload);
+            btn.disabled = false;
+            btn.innerText = 'Sign In';
+
+            if (res && res.result === true) {
+                sessionStorage.setItem('user', JSON.stringify(res.data));
+                window.location.href = 'index.html';
+            } else {
+                showAlert('alertBox', 'danger', (res && res.message) ? res.message : 'Invalid login credentials.');
+            }
+        });
+    }
+
+    // 3. Handle Registration Submit
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnRegister');
+            btn.disabled = true;
+            btn.innerText = 'Creating account...';
+
+            const fullName = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
+
+            const payload = {
+                userId: 0,
+                userName: email,
+                fullName: fullName,
+                emailId: email,
+                password: password,
+                role: 'Customer'
+            };
+
+            const res = await apiPost('/BusBooking/AddNewUser', payload);
+            btn.disabled = false;
+            btn.innerText = 'Register';
+
+            if (res && res.result === true) {
+                showAlert('alertBox', 'success', 'Registration successful! Please login.');
+                registerForm.reset();
+                const loginTab = document.getElementById('pills-login-tab');
+                if (loginTab) loginTab.click();
+            } else {
+                showAlert('alertBox', 'danger', (res && res.message) ? res.message : 'Failed to register.');
+            }
+        });
     }
 });
 
-// Register Form Event Listener
-document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const fullNameVal = document.getElementById('regName').value.trim();
-    const emailVal = document.getElementById('regEmail').value.trim();
-    const passwordVal = document.getElementById('regPassword').value.trim();
-
-    // Backend User model schema matching
-    const payload = {
-        userId: 0,
-        userName: emailVal,        // බොහෝ විට unique identifier එක ලෙස email එක ගනී
-        fullName: fullNameVal,
-        emailId: emailVal,
-        password: passwordVal,
-        role: 'Customer'
-    };
-
-    const res = await apiPost('/BusBooking/AddNewUser', payload);
-    
-    if (res.result) {
-        showAlert('alertBox', 'success', 'Account created successfully! Please sign in.');
-        document.getElementById('registerForm').reset();
-        
-        // සාර්ථක වූ පසු ස්වයංක්‍රීයව Login Tab එකට මාරු කිරීම
-        const loginTabBtn = document.querySelector('button[data-bs-target="#loginTab"]');
-        if (loginTabBtn) {
-            loginTabBtn.click();
-        }
-    } else {
-        showAlert('alertBox', 'danger', res.message || 'Registration failed.');
-    }
-});
-
-// Auth Guard Utility (Protected Pages සඳහා)
+// Guard helper for client pages
 function checkAuth() {
-    const user = sessionStorage.getItem('user');
-    if (!user) {
+    const userJson = sessionStorage.getItem('user');
+    if (!userJson) {
         window.location.href = 'login.html';
         return null;
     }
-    return JSON.parse(user);
+    return JSON.parse(userJson);
 }
 
-// User Logout Utility
+// User Logout
 function logout() {
     sessionStorage.clear();
     window.location.href = 'login.html';
